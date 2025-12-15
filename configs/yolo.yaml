@@ -1,0 +1,7 @@
+path: ../datasets/container  # dataset root dir
+train: images/train
+val: images/val
+
+# Classes
+names:
+  0: container_door
