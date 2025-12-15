@@ -16,10 +16,10 @@ def run_cmd(cmd):
     print(f"Exec: {cmd}")
     try:
         result = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
-        print(result.decode("utf-8"))
+        print(result.decode("utf-8", errors="replace"))
         return True
     except subprocess.CalledProcessError as e:
-        print(f"❌ Error: {e.output.decode('utf-8')}")
+        print(f"❌ Error: {e.output.decode('utf-8', errors='replace')}")
         return False
 
 
@@ -67,7 +67,7 @@ def setup_and_push_git():
     # Create Proof File
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     proof_file = "kaggle_proof.txt"
-    with open(proof_file, "w") as f:
+    with open(proof_file, "w", encoding="utf-8") as f:
         f.write(f"Verified from Kaggle at {timestamp}\n")
         f.write("If you are reading this on Github, it means: \n")
         f.write("1. All code has been successfully uploaded to Kaggle.\n")
