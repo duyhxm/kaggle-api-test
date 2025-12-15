@@ -5,14 +5,14 @@ from datetime import datetime
 
 from kaggle_secrets import UserSecretsClient
 
-# --- Cấu hình GitHub của bạn ---
+# --- Configuration ---
 GITHUB_USERNAME = "duyhxm"
-REPO_NAME = "kaggle-api-test"  # Đổi tên repo nếu bạn dùng repo khác
-BRANCH_NAME = "verify-kaggle-push"  # Tên nhánh test sẽ được tạo
+REPO_NAME = "kaggle-api-test"
+BRANCH_NAME = "verify-kaggle-push"
 
 
 def run_cmd(cmd):
-    """Hàm chạy lệnh shell và in kết quả"""
+    """Execute shell command and print result"""
     print(f"Exec: {cmd}")
     try:
         result = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
@@ -24,9 +24,9 @@ def run_cmd(cmd):
 
 
 def list_files(startpath):
-    """In ra cây thư mục để kiểm chứng file đã được upload lên chưa"""
+    """Print directory tree to verify uploaded files"""
     print("\n" + "=" * 40)
-    print(f"📂 KIỂM TRA CẤU TRÚC THƯ MỤC TẠI: {os.path.abspath(startpath)}")
+    print(f"📂 DIRECTORY STRUCTURE CHECK AT: {os.path.abspath(startpath)}")
     print("=" * 40)
     for root, dirs, files in os.walk(startpath):
         level = root.replace(startpath, "").count(os.sep)
@@ -39,60 +39,57 @@ def list_files(startpath):
 
 
 def setup_and_push_git():
-    print("🚀 Bắt đầu quy trình test Git Push...")
+    print("🚀 Starting Git Push test process...")
 
-    # 1. Lấy Token (Bắt buộc phải set trong Kaggle Secrets trước)
     try:
         user_secrets = UserSecretsClient()
-        # Lưu ý: Bạn phải chắc chắn tên Secret trên Web là 'GITHUB_TOKEN'
         github_token = user_secrets.get_secret("GITHUB_TOKEN")
     except Exception as e:
         print(
-            "❌ LỖI: Không lấy được GITHUB_TOKEN từ Secrets. Bạn đã Add-ons -> Secrets chưa?"
+            "❌ ERROR: Could not retrieve GITHUB_TOKEN from Secrets. Did you set it in Add-ons -> Secrets?"
         )
-        print(f"Chi tiết: {e}")
+        print(f"Details: {e}")
         return
 
-    # 2. Setup Git User
+    # Configure Git User
     run_cmd("git config --global user.email 'bot@kaggle.com'")
     run_cmd("git config --global user.name 'Kaggle Verify Bot'")
 
-    # 3. Khởi tạo Git (Vì .git không được push lên, ta phải init lại)
+    # Initialize Git
     if not os.path.exists(".git"):
         run_cmd("git init")
 
-    # 4. Thêm Remote (Có chứa Token để xác thực)
+    # Configure Remote
     remote_url = f"https://{GITHUB_USERNAME}:{github_token}@github.com/{GITHUB_USERNAME}/{REPO_NAME}.git"
-    # Xóa remote cũ nếu có để tránh lỗi
     run_cmd("git remote remove origin")
     run_cmd(f"git remote add origin {remote_url}")
 
-    # 5. Tạo file bằng chứng (Proof)
+    # Create Proof File
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     proof_file = "kaggle_proof.txt"
     with open(proof_file, "w") as f:
         f.write(f"Verified from Kaggle at {timestamp}\n")
-        f.write("Nếu bạn đọc được dòng này trên Github nghĩa là: \n")
-        f.write("1. Toàn bộ code đã lên Kaggle.\n")
-        f.write("2. Kaggle đã push ngược lại thành công.")
+        f.write("If you are reading this on Github, it means: \n")
+        f.write("1. All code has been successfully uploaded to Kaggle.\n")
+        f.write("2. Kaggle has successfully pushed back to GitHub.")
 
-    # 6. Commit và Push
+    # Commit and Push
     run_cmd(f"git checkout -b {BRANCH_NAME}")
     run_cmd("git add .")
     run_cmd(f"git commit -m 'Test push from Kaggle API at {timestamp}'")
 
-    print(f"📡 Đang đẩy code lên branch '{BRANCH_NAME}'...")
+    print(f"📡 Pushing code to branch '{BRANCH_NAME}'...")
     success = run_cmd(f"git push -f origin {BRANCH_NAME}")
 
     if success:
-        print("\n✅ THÀNH CÔNG! Hãy kiểm tra GitHub của bạn ngay.")
+        print("\n✅ SUCCESS! Check your GitHub immediately.")
     else:
-        print("\n❌ THẤT BẠI. Hãy xem log lỗi ở trên.")
+        print("\n❌ FAILED. Check the error log above.")
 
 
 if __name__ == "__main__":
-    # Bước 1: Kiểm tra xem file local có lên đây đủ không
+    # Step 1: Check if local files were uploaded correctly
     list_files(".")
 
-    # Bước 2: Test bắn ngược về Github
+    # Step 2: Test push back to Github
     setup_and_push_git()
