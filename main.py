@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import subprocess
 import sys
@@ -16,39 +17,55 @@ def run_cmd(cmd):
     print(f"Exec: {cmd}")
     try:
         result = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
-        print(result.decode("utf-8", errors="replace"))
+        print(result.decode("utf-8"))
         return True
     except subprocess.CalledProcessError as e:
-        print(f"❌ Error: {e.output.decode('utf-8', errors='replace')}")
+        print(f"Error: {e.output.decode('utf-8')}")
         return False
 
 
 def list_files(startpath):
     """Print directory tree to verify uploaded files"""
     print("\n" + "=" * 40)
-    print(f"📂 DIRECTORY STRUCTURE CHECK AT: {os.path.abspath(startpath)}")
+    print(f"[DIR] DIRECTORY STRUCTURE CHECK AT: {os.path.abspath(startpath)}")
     print("=" * 40)
     for root, dirs, files in os.walk(startpath):
         level = root.replace(startpath, "").count(os.sep)
         indent = " " * 4 * (level)
-        print(f"{indent}📁 {os.path.basename(root)}/")
+        print(f"{indent}[+] {os.path.basename(root)}/")
         subindent = " " * 4 * (level + 1)
         for f in files:
-            print(f"{subindent}📄 {f}")
+            print(f"{subindent}[-] {f}")
     print("=" * 40 + "\n")
 
 
 def setup_and_push_git():
-    print("🚀 Starting Git Push test process...")
+    print("[START] Starting Git Push test process...")
 
+    github_token = None
+
+    # Try Method 1: Read from attached dataset (recommended for CLI workflow)
     try:
-        user_secrets = UserSecretsClient()
-        github_token = user_secrets.get_secret("GITHUB_TOKEN")
+        token_file = "/kaggle/input/github-credentials/github_token.txt"
+        with open(token_file, "r") as f:
+            github_token = f.read().strip()
+        print("[SUCCESS] GITHUB_TOKEN loaded from dataset")
     except Exception as e:
-        print(
-            "❌ ERROR: Could not retrieve GITHUB_TOKEN from Secrets. Did you set it in Add-ons -> Secrets?"
-        )
-        print(f"Details: {e}")
+        print(f"[WARN] Could not read token from dataset: {e}")
+
+        # Try Method 2: Kaggle Secrets (only works if manually set in web UI)
+        try:
+            user_secrets = UserSecretsClient()
+            github_token = user_secrets.get_secret("GITHUB_TOKEN")
+            print("[SUCCESS] GITHUB_TOKEN loaded from Secrets")
+        except Exception as secret_error:
+            print(
+                f"[ERROR] Could not retrieve GITHUB_TOKEN from Secrets either: {secret_error}"
+            )
+
+    if not github_token:
+        print("[ERROR] GITHUB_TOKEN not found!")
+        print("[INFO] Make sure dataset 'duyhxm/github-credentials' is attached")
         return
 
     # Configure Git User
@@ -78,13 +95,13 @@ def setup_and_push_git():
     run_cmd("git add .")
     run_cmd(f"git commit -m 'Test push from Kaggle API at {timestamp}'")
 
-    print(f"📡 Pushing code to branch '{BRANCH_NAME}'...")
+    print(f"[PUSH] Pushing code to branch '{BRANCH_NAME}'...")
     success = run_cmd(f"git push -f origin {BRANCH_NAME}")
 
     if success:
-        print("\n✅ SUCCESS! Check your GitHub immediately.")
+        print("\n[SUCCESS] Check your GitHub immediately.")
     else:
-        print("\n❌ FAILED. Check the error log above.")
+        print("\n[FAILED] Check the error log above.")
 
 
 if __name__ == "__main__":
